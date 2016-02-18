@@ -1,0 +1,48 @@
+#!/bin/bash
+# (c) 2008 The Board of Trustees of the University of Illinois.
+
+FCUDA_DEFINES="-D__DEVICE_EMULATION__ -D__MCUDA__ -D__FCUDA__"
+CLASSPATH=$FROOT/jar/cetus.jar:$FROOT/jar/antlr.jar:$FROOT/jar/fcuda.jar
+export CLASSPATH;
+OPT="";
+
+Usage() {
+  echo "Usage: fcuda <file> [-preproc-options \"\"] [options]";
+  exit 1;
+}
+
+if [ $# -lt 1 ] ; then
+  Usage;
+fi
+
+ARG=$1
+shift
+
+if [ $# -ge 1 ] ; then
+  if [ $1 == -preproc-options ]; then
+    shift;
+    if [ $# -lt 1 ] ; then
+      Usage;
+    else
+      OPT=$1;
+      shift;
+    fi
+  fi
+fi
+
+FILE=""
+FILEPATH=""
+regex="(.*/)*(.*)"
+if [[ $ARG =~ $regex ]]; then
+  FILEPATH=${BASH_REMATCH[1]}
+  FILE=${BASH_REMATCH[2]}
+fi
+
+if [ -z "${BENCHMARK_DIR}" ]; then
+  BENCHMARK_DIR=$(pwd)
+fi
+
+INCLUDE_FLAGS="-I$FROOT/include -I${FILEPATH} -I${BENCHMARK_DIR}"
+java fcuda.DriverFCUDA -Fcuda $@ \
+  -outdir=${FILEPATH}fcuda_output \
+  -preprocessor="gcc -x c -E $FCUDA_DEFINES $INCLUDE_FLAGS $OPT" $ARG

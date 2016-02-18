@@ -1,0 +1,11 @@
+fcuda_src/src/class
+fcuda_src/cetus-1.3/class
+fcuda_src/jar
+cetus.jar
+fcuda.jar
+*~
+*.swp
+*.exe
+*.pyc
+*.o
+*.log

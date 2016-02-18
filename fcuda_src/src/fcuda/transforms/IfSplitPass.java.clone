@@ -1,0 +1,491 @@
+package fcuda.transform;
+
+import java.util.*;
+
+import fcuda.common.*;
+import fcuda.utils.*;
+
+import cetus.hir.*;
+import cetus.analysis.*;
+import cetus.exec.*;
+import cetus.transforms.*;
+
+/*
+ * Pass to split all if statements at the point where FCUDA pragma is 
+ * inserted so that AutoPilot can detect parallelism and also to achieve
+ * communication and computation overlap
+ */
+
+public class IfSplitPass extends KernelTransformPass
+{
+	private Procedure mProcedure;
+	private IDExpression mCurrEnableSignal;
+
+	private HashSet<WhileLoop> mCreatedWhileLoops;
+	private HashMap<WhileLoop, IDExpression> mCreatedWhileLoops2Guard;
+	private HashMap<WhileLoop, IfStatement> mCreatedWhileLoops2IfStmt;
+
+	private int mWhileLoopId;
+
+	private Statement mCurrentFCUDACore;
+
+	public IfSplitPass(Program program)
+	{
+		super(program);
+		mCreatedWhileLoops = new HashSet();
+		mCreatedWhileLoops2Guard = new HashMap();
+		mCreatedWhileLoops2IfStmt = new HashMap();
+		mWhileLoopId = 0;
+		clear();
+	}
+
+	public void clear()
+	{
+		mCreatedWhileLoops.clear();
+		mCreatedWhileLoops2Guard.clear();
+		mCreatedWhileLoops2IfStmt.clear();
+	}
+
+	public String getPassName()
+	{
+		return new String("[IfSplitPass-FCUDA]");
+	}
+
+	public Traversable handleIf(IfStatement ifStmt, Statement splitPos, Traversable prev)
+	{
+		Statement elseStmt = ifStmt.getElseStatement();
+		Statement thenStmt = ifStmt.getThenStatement();
+		Statement splitPosClone = splitPos.clone();
+
+		boolean condFlag = true;
+		Statement toSplit = null;
+
+		//FIXME: for sure some of these checks will fail as more examples are used
+		if(!splitPos.getParent().equals(prev))
+			Tools.exit("If stmt :\n"+ifStmt.toString()+"\n is not a parent of split position : "+splitPos.toString());
+		if(elseStmt != null && prev.equals(elseStmt))
+		{
+			condFlag = false;
+			toSplit = elseStmt;
+		}
+		else
+			if(thenStmt.equals(prev))
+			{
+				condFlag = true;
+				toSplit = thenStmt;
+			}
+			else
+				Tools.exit("Parent of split position "+splitPos.toString()+" is neither if nor else part of "+ifStmt.toString());
+
+		if(!(toSplit instanceof CompoundStatement))
+			Tools.exit("What kind of statement is this ?"+toSplit.toString());
+
+		CompoundStatement leadBlock = new CompoundStatement();
+		List<Statement> leadStmts = new LinkedList<Statement>();
+		CompoundStatement trailBlock = new CompoundStatement();
+		List<Statement> trailStmts = new LinkedList<Statement>();
+
+		boolean breakPoint = false;
+		int leadCount = 0, trailCount = 0;
+		FlatIterator codeIter = new FlatIterator(prev);
+		while(codeIter.hasNext())
+		{
+			Statement currStmt = null;
+			try
+			{
+			    //*cetus-1.1*  currStmt = codeIter.next(Statement.class);
+			    currStmt = (Statement)codeIter.next(Statement.class);
+			}
+			catch(NoSuchElementException e)
+			{
+				break;
+			}
+
+			if(currStmt instanceof AnnotationStatement)
+				continue;
+
+			//FIXME: Assume user has defined pragmas so well that syncthreads are not needed :(
+			if(FCUDAutils.isSyncThreadStatement(currStmt))
+				continue;
+
+			//System.out.println("\n##### Traversing ############\n"+currStmt.toString()+"\n$$$$$$$$$$$$$$$");
+			//currStmt.detach();
+			if(currStmt.equals(splitPos))
+				breakPoint = true;
+			else
+			{
+				if(breakPoint)
+				{
+				    //*cetus-1.1*   trailBlock.addStatement(currStmt);
+					trailStmts.add(currStmt);
+					++trailCount;
+				}
+				else
+				{
+				    //*cetus-1.1*   leadBlock.addStatement(currStmt);
+					leadStmts.add(currStmt);
+					leadCount++;
+				}
+			}
+		}
+		
+		// Do actual statements transfers
+		for(Statement tStmt : trailStmts) {
+		    tStmt.detach();
+		    trailBlock.addStatement(tStmt);
+		}
+		for(Statement lStmt : leadStmts) {
+		    lStmt.detach();
+		    leadBlock.addStatement(lStmt);
+		}
+		
+		// *debug*
+		//System.out.println("In if stmt, lead list "+leadBlock.toString());
+		//System.out.println("\nIn if stmt, trail list "+trailBlock.toString());
+
+		Expression condExpr;
+		condExpr = ifStmt.getControlExpression();
+		if(!condFlag)
+			condExpr = Symbolic.negate(condExpr);
+
+
+		IfStatement leadIfStatement = null;
+		if(leadCount > 0)
+			if(!condFlag)
+				//split is in else part
+				leadIfStatement = new IfStatement((Expression)(ifStmt.getControlExpression().clone()), 
+								  //*cetus-1.1*   thenStmt, leadBlock);
+								  thenStmt.clone(), leadBlock);
+			else
+				leadIfStatement = new IfStatement((Expression)condExpr.clone(), leadBlock);
+
+		IfStatement trailIfStatement = null;
+		if(trailCount > 0)
+			if(!condFlag)
+				trailIfStatement = new IfStatement((Expression)condExpr.clone(), trailBlock);
+			else
+				if(elseStmt != null)
+					trailIfStatement = new IfStatement((Expression)condExpr.clone(), 
+									   //*cetus-1.1*   trailBlock, elseStmt);
+									   trailBlock, elseStmt.clone());
+				else
+					trailIfStatement = new IfStatement((Expression)condExpr.clone(), 
+									   trailBlock);
+
+		if(!(ifStmt.getParent() instanceof CompoundStatement))
+			Tools.exit("I give up : what kind of statement is : "+ifStmt.getParent().toString());
+		CompoundStatement parentStmt = (CompoundStatement)ifStmt.getParent();
+
+		Statement lastStmt = ifStmt;
+
+		if(leadIfStatement != null)
+		{
+			parentStmt.addStatementAfter(ifStmt, leadIfStatement);
+			lastStmt = leadIfStatement;
+		}
+
+		if(!(splitPos instanceof WhileLoop && isCreatedByMe((WhileLoop)splitPos)))
+		{
+			if(splitPos.equals(mCurrentFCUDACore))
+			{
+				if(!(mCurrentFCUDACore instanceof ExpressionStatement)
+						|| !(((ExpressionStatement)mCurrentFCUDACore)
+							.getExpression() instanceof FunctionCall))
+					Tools.exit("What kind of split position is this "+splitPos.toString());
+				FunctionCall coreCall = ((FunctionCall)(
+							((ExpressionStatement)mCurrentFCUDACore)
+							.getExpression()));
+				Expression enableExpr = FCUDAGlobalData.getEnableExpression(coreCall);
+				Expression binExpr = new BinaryExpression((Expression)(enableExpr.clone()),
+						BinaryOperator.LOGICAL_AND,
+						(Expression)condExpr.clone()
+						);
+				Tools.replaceAll(enableExpr.getParent(), enableExpr, binExpr); 
+				//*cetus-1.1*   parentStmt.addStatementAfter(lastStmt, splitPos);
+				parentStmt.addStatementAfter(lastStmt, splitPosClone);
+				mCurrentFCUDACore = splitPosClone;
+			}
+			else
+			{
+				ExpressionStatement exprStmt = new ExpressionStatement(new AssignmentExpression
+										       ((Expression)mCurrEnableSignal.clone(),
+											AssignmentOperator.BITWISE_AND,
+										        (Expression)condExpr.clone()
+											)
+										       );
+				parentStmt.addStatementAfter(lastStmt, exprStmt);
+				//*cetus-1.1*   parentStmt.addStatementAfter(exprStmt, splitPos);
+				parentStmt.addStatementAfter(exprStmt, splitPosClone);
+			}
+		}
+		else
+		    //*cetus-1.1*   parentStmt.addStatementAfter(lastStmt, splitPos);
+		    parentStmt.addStatementAfter(lastStmt, splitPosClone);
+
+		if(trailIfStatement != null)
+		    //*cetus-1.1*  parentStmt.addStatementAfter(splitPos, trailIfStatement);
+		    parentStmt.addStatementAfter(splitPosClone, trailIfStatement);
+
+		ifStmt.detach();
+
+		// *FIXME* Calling this after detaching ifStmt does NOT make sense????
+		// *AP*    This call is probably useless and should be removed ???
+		handleChildWhileLoops(ifStmt, condExpr);
+
+		//*cetus-1.1*  return splitPos;
+		return splitPosClone;
+
+	} // handleIf()
+
+	public void handleChildWhileLoops(IfStatement ifStmt, Expression condExpr)
+	{
+		BreadthFirstIterator bfsIter = new BreadthFirstIterator(ifStmt);
+		bfsIter.pruneOn(WhileLoop.class);
+		CompoundStatement parentStmt = (CompoundStatement)(ifStmt.getParent());
+
+		while(bfsIter.hasNext())
+		{
+			WhileLoop currWhileLoop = null;
+			try
+			{
+			    //*cetus-1.1*   currWhileLoop = bfsIter.next(WhileLoop.class);
+			    currWhileLoop = (WhileLoop)bfsIter.next(WhileLoop.class);
+			}
+			catch(NoSuchElementException e)
+			{
+				break;
+			}
+
+			if(isCreatedByMe(currWhileLoop))
+			{
+				ExpressionStatement condStmt = new ExpressionStatement(
+						new AssignmentExpression(
+							(IDExpression)(FCUDAGlobalData.getGuardVar(currWhileLoop).clone()),
+							AssignmentOperator.BITWISE_AND,
+							condExpr
+							)
+						);
+				parentStmt.addStatementAfter(FCUDAGlobalData.getGuardInitStmt(currWhileLoop), condStmt);
+				//AssignmentExpression whileLoopExpr = (AssignmentExpression)FCUDAGlobalData.getWhileLoopCondition(currWhileLoop);
+				//BinaryExpression binExpr = new BinaryExpression(condExpr, BinaryOperator.LOGICAL_AND,
+				//whileLoopExpr.getRHS());
+				//whileLoopExpr.setRHS(binExpr);
+			}
+		}
+	}
+
+	public Statement handleFor(ForLoop forStmt, Statement splitPos)
+	{
+		if(!(forStmt.getParent() instanceof CompoundStatement))
+			Tools.exit("I give up : what kind of statement is : "+forStmt.getParent().toString());
+		CompoundStatement parentStmt = (CompoundStatement)forStmt.getParent();
+		
+		CompoundStatement loopBody = null;
+		Statement splitPosClone = null;
+		if(forStmt.getBody() instanceof CompoundStatement) {
+		    //*cetus-1.1*   CompoundStatement loopBody = (CompoundStatement)forStmt.getBody();
+		    loopBody = (CompoundStatement)forStmt.getBody().clone();
+		    splitPosClone = (Statement)loopBody.getChildren().get(Tools.identityIndexOf(forStmt.getBody().getChildren(), splitPos));
+		}
+		else {
+		    loopBody = new CompoundStatement();
+		    loopBody.addStatement(forStmt.getBody().clone());
+		    assert(loopBody.getChildren().size() == 1);
+		    splitPosClone = (Statement)loopBody.getChildren().get(0);
+		}
+
+		// Update mCurrentFCUDACore
+		mCurrentFCUDACore = splitPosClone;
+
+		// Convert loop step expression to regular statement in loopBody
+		Expression stepExpr = forStmt.getStep();
+		if(stepExpr instanceof CommaExpression)
+		{
+			for(Traversable t : stepExpr.getChildren() )
+			{
+			    ExpressionStatement stepStmt = new ExpressionStatement(((Expression)t).clone());
+			    loopBody.addStatement(stepStmt);
+			}
+		}
+		else 
+			loopBody.addStatement(new ExpressionStatement(stepExpr));
+
+		//*cetus-1.1*   IDExpression whileLoopGuard = new Identifier("whileLoopGuard_"+mWhileLoopId++);
+		IDExpression whileLoopGuard = new NameID("whileLoopGuard_"+mWhileLoopId++);
+		VariableDeclarator whileVDecl = new VariableDeclarator(whileLoopGuard);
+		//*cetus-1.1*  mProcedure.getBody().addANSIDeclaration(new VariableDeclaration(Specifier.INT, whileVDecl));
+		mProcedure.getBody().addDeclaration(new VariableDeclaration(Specifier.INT, whileVDecl));
+
+		Expression condExpr = forStmt.getCondition();
+		AssignmentExpression whileLoopExpr = new AssignmentExpression(
+			      //*cetus-1.1*   (Expression)whileLoopGuard.clone(),
+			      new Identifier(whileVDecl),
+			      AssignmentOperator.BITWISE_AND,
+			      condExpr.clone());
+		ExpressionStatement condStmt = new ExpressionStatement(whileLoopExpr);
+
+		ExpressionStatement guardInitStmt = new ExpressionStatement(
+				new AssignmentExpression(
+					 //*cetus-1.1*   (Expression)whileLoopGuard.clone(),
+					 new Identifier(whileVDecl),
+					 AssignmentOperator.NORMAL,
+					 new IntegerLiteral(1)
+					)
+				);
+		parentStmt.addStatementBefore(forStmt, guardInitStmt);
+		
+		//*cetus-1.1*    IfStatement brkCondStmt = new IfStatement(Symbolic.negate((Expression)whileLoopGuard.clone()), 
+		IfStatement brkCondStmt = new IfStatement(Symbolic.negate(new Identifier(whileVDecl)), 
+						     new BreakStatement());
+
+		CompoundStatement whileLoopBody = new CompoundStatement();
+		
+		//*cetus-1.1*   IfStatement ifGuard = new IfStatement((Expression)whileLoopGuard.clone(), loopBody);
+		IfStatement ifGuard = new IfStatement(new Identifier(whileVDecl), loopBody);
+
+		whileLoopBody.addStatement(condStmt);
+		whileLoopBody.addStatementAfter(condStmt, brkCondStmt);
+		whileLoopBody.addStatementAfter(brkCondStmt, ifGuard);
+
+		WhileLoop whileStmt = new WhileLoop(new IntegerLiteral(1), whileLoopBody);
+		
+		FCUDAGlobalData.setGuardInitStmt(whileStmt, guardInitStmt);
+		
+		Statement initStmt = forStmt.getInitialStatement();
+		//initStmt = (Statement)initStmt.clone();
+		//initStmt.detach();
+		if(initStmt instanceof ExpressionStatement && 
+		   ((ExpressionStatement)initStmt).getExpression() instanceof CommaExpression)
+		{
+			Statement curStmt  = null;
+			Statement prevStmt = forStmt;
+			CommaExpression ce = (CommaExpression)((ExpressionStatement)initStmt).getExpression();
+			for(Traversable t : ce.getChildren() )
+			{
+			    curStmt = new ExpressionStatement(((Expression)t).clone());
+			    parentStmt.addStatementAfter(prevStmt, curStmt);
+			    prevStmt = curStmt;
+			}
+			parentStmt.addStatementAfter(prevStmt, whileStmt);
+		}
+		else 
+		{
+			parentStmt.addStatementAfter(forStmt, initStmt);
+			parentStmt.addStatementAfter(initStmt, whileStmt);
+		}
+
+		FCUDAGlobalData.setWhileLoopCondition(whileStmt, whileLoopExpr);
+		mCreatedWhileLoops.add(whileStmt);
+
+		//*cetus-1.1*    mCreatedWhileLoops2Guard.put(whileStmt, whileLoopGuard);
+		mCreatedWhileLoops2Guard.put(whileStmt, new Identifier(whileVDecl));
+		mCreatedWhileLoops2IfStmt.put(whileStmt, brkCondStmt);
+
+		forStmt.detach();
+		
+		handleIf(ifGuard, splitPosClone, loopBody);
+		
+		return whileStmt;
+	} // handleFor()
+
+	private boolean isCreatedByMe(WhileLoop t)
+	{
+		return mCreatedWhileLoops.contains(t);
+	}
+
+	public Traversable handleCreatedWhile(WhileLoop whileStmt)
+	{
+		IDExpression guard = mCreatedWhileLoops2Guard.get(whileStmt);
+		IfStatement ifStmt = mCreatedWhileLoops2IfStmt.get(whileStmt);
+		ExpressionStatement exprStmt = new ExpressionStatement(new AssignmentExpression
+								       ((Expression)mCurrEnableSignal.clone(),
+									AssignmentOperator.BITWISE_AND,
+									guard.clone()
+									)
+								       );
+		((CompoundStatement)ifStmt.getParent()).addStatementAfter(ifStmt, exprStmt);
+		return whileStmt;
+	}
+
+	public void handleCoveringControlFlow(Statement currStmt, Statement coreStmt)
+	{
+		Traversable prev = currStmt;
+		Traversable parnt = currStmt.getParent();
+		Statement splitPosition = coreStmt;
+
+		while(parnt != mProcedure)
+		{
+			if(!(parnt instanceof Statement))
+				Tools.exit("What kind of traversable is this ?"+parnt.toString());
+			if(parnt instanceof IfStatement)
+				parnt = handleIf((IfStatement)parnt, splitPosition, prev);
+			else
+				if(parnt instanceof ForLoop)
+				{
+					parnt = handleFor((ForLoop)parnt, splitPosition);
+					splitPosition = (Statement)parnt;
+				}
+				//else
+					//if(parnt instanceof WhileLoop && isCreatedByMe((WhileLoop)parnt))
+					//{
+						//parnt = handleCreatedWhile((WhileLoop)parnt);
+						//splitPosition = (Statement)parnt;
+					//}
+			prev = parnt;
+			parnt = parnt.getParent();
+		}
+	}
+
+	public void runPass(Procedure proc)
+	{
+		mProcedure = proc;
+		List<FunctionCall> fcudaCores = FCUDAGlobalData.getFcudaCores(mProcedure);
+		for(FunctionCall currCore : fcudaCores)
+		{
+			System.out.println("Handling control flow for "+currCore.toString());
+			mCurrEnableSignal = FCUDAGlobalData.getEnableSignal(currCore);
+			Statement currStmt = FCUDAutils.getClosestParentStmt(currCore);
+			mCurrentFCUDACore = currStmt;
+			handleCoveringControlFlow(currStmt, currStmt);
+
+			// *debug*
+			System.out.println("\n*** Intermediate IfSplitPass Procedure state  ***");
+			System.out.println(mProcedure.toString());
+			System.out.println("===========================================");
+		}
+		//optimizeIfElse(proc.getBody());
+	}
+
+	//public void optimizeIfElse(CompoundStatement cStmt)
+	//{
+		//FlatIterator iter = new FlatIterator(cStmt);
+		//while(iter.hasNext())
+		//{
+			//Object nextObj = iter.next();
+			//if(nextObj instanceof IfStatement)
+			//{
+				//IfStatement ifStmt = (IfStatement)nextObj;
+
+				//if((CompoundStatement)(ifStmt.getThenStatement()).countStatements() == 0)
+			//}
+		//}
+	//}
+
+	public void transformProcedure(Procedure proc)
+	{
+	    if(!(FCUDAGlobalData.isConstMemProc(proc))) {
+		runPass(proc);
+		updateGlobalData();
+	    }
+	}
+
+	private void updateGlobalData()
+	{
+		for(WhileLoop currLoop : mCreatedWhileLoops)
+		{
+			IDExpression guardVar = mCreatedWhileLoops2Guard.get(currLoop);
+			IfStatement guardIf = mCreatedWhileLoops2IfStmt.get(currLoop);
+			FCUDAGlobalData.addWhileLoopData(currLoop, guardVar, guardIf);
+		}
+	}
+}

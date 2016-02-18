@@ -1,0 +1,127 @@
+<!--
+build.xml for apache ant; just change the location of antlr.jar before using
+the ant tools (see property name="antlr").
+-->
+
+<project name="cetus" default="jar" basedir=".">
+
+  <!-- Environment prefix -->
+  <property environment="env"/>
+
+  <!-- Cetus root directory -->
+  <property name="cetusdir" value="${basedir}"/>
+
+  <!-- Source directory -->
+  <property name="srcdir" value="${cetusdir}/src"/>
+
+  <!-- Parser directory -->
+  <property name="parserdir" value="${cetusdir}/src/cetus/base/grammars"/>
+
+  <!-- Class directory -->
+  <property name="classdir" value="${cetusdir}/class"/>
+
+  <!-- Jar directory -->
+  <property name="jardir" value="${cetusdir}/lib"/>
+
+  <!-- Wrapper directory -->
+  <property name="bindir" value="${cetusdir}/bin"/>
+
+  <!-- Javadoc directory -->
+  <property name="apidir" value="${cetusdir}/api"/>
+
+  <!-- Antlr directory - MODIFY THIS VARIABLE FOR YOUR ENVIRONMENT!!! -->
+  <property name="antlr" value="${cetusdir}/lib/antlr.jar"/>
+
+  <!-- Classpath -->
+  <property name="classpath" value="${classdir}:${antlr}" />
+
+  <!-- Conditional property that checks if the parser is available -->
+  <condition property="parser.exists">
+    <available file="${parserdir}/NewCParser.java"/>
+  </condition>
+
+  <!-- Compiles the source codes -->
+  <target name="compile" depends="parser">
+    <mkdir dir="${classdir}"/>
+    <javac
+      srcdir    = "${srcdir}"
+      destdir   = "${classdir}"
+      classpath = "${classpath}"
+      debug     = "true"
+      includeAntRuntime = "false"
+      source    = "1.5"
+      target    = "1.5"
+    >
+      <!-- Warning is turned off by default 
+      <compilerarg value="-Xlint"/>
+      <compilerarg value="-Xlint:-unchecked"/>
+      <compilerarg value="-Xlint:-serial"/>
+      <compilerarg line="-Xmaxwarns 10000"/>
+      -->
+    </javac>
+  </target>
+
+  <!-- Generates the parser from the grammar file -->
+  <target name="parser" unless="parser.exists">
+    <java
+      classpath = "${classpath}"
+      classname = "antlr.Tool"
+      args      = "Pre.g"
+      dir       = "${parserdir}"
+      fork      = "true"
+    />
+    <java
+      classpath = "${classpath}"
+      classname = "antlr.Tool"
+      args      = "NewCParser.g"
+      dir       = "${parserdir}"
+      fork      = "true"
+    />
+  </target>
+
+  <!-- Archives the compiled class files -->
+  <target name="jar" depends="compile">
+    <mkdir dir = "${jardir}"/>
+    <jar
+      destfile = "${jardir}/cetus.jar"
+      basedir  = "${classdir}"
+      includes = "**/*.class"
+      compress = "true"  
+    >
+      <manifest>
+        <attribute name="Main-Class" value="cetus.exec.Driver"/>
+      </manifest>
+    </jar>
+  </target>
+
+  <!-- Creates javadoc -->
+  <target name="javadoc">
+    <mkdir dir = "${apidir}"/>
+    <javadoc
+      destdir   = "${apidir}"
+      classpath = "${classpath}">
+      <fileset dir="${srcdir}" includes="**/*.java"/>
+    </javadoc>
+  </target>
+
+  <!-- Creates a wrapper script -->
+  <target name="bin" depends="jar">
+    <mkdir dir = "${bindir}"/>
+    <echo file = "${bindir}/cetus">#!/bin/sh
+# This file was generated automatically by ant.
+java -cp ${antlr}:${jardir}/cetus.jar -Xmx1g cetus.exec.Driver $*
+    </echo>
+    <chmod file="${bindir}/cetus" perm="755"/>
+  </target>
+
+  <!-- Cleans up class files and parser code -->
+  <target name="clean">
+    <delete includeEmptyDirs="true" quiet="true">
+      <fileset dir="${parserdir}" excludes="**.g CT** Li** Pra** Prepro** Cetus**"/>
+      <fileset dir="${classdir}"/>
+      <fileset dir="${bindir}"/>
+      <fileset dir="${jardir}" excludes="antlr.jar checkstyle.jar"/>
+    </delete>
+  </target>
+
+</project>
