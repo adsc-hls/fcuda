@@ -15,6 +15,10 @@ does not rely on any specific compiler infrastructure from NVIDIA (nvcc).
 - FCUDA can only support CUDA C 4.5 at this moment. C++ syntax and texture memory is not yet supported.
 
 ##FCUDA Setup
+- Open the script **env_vars.sh** at the top-level directory. Add the path of FCUDA and other software
+according to the setup of your system in this file. After that, execute the command `source env_vars.sh` to
+export all the defined environment variables.
+
 - Change the directory to *fcuda_src/*. The compiler is written in Java. Hence, Java compiler 
 (javac) is required. Please install openjdk. Alternatively, you can run the script: `python setup_packages.py` 
 to automatically install all the required software.
@@ -24,12 +28,11 @@ to automatically install all the required software.
 **fcuda_jar**, respectively. These files are put under *jar/*. Please note that whenever you update the 
 FCUDA source code or Cetus source code, you have to do the recompilation.
 
-- Open the script **env_vars.sh** at the top-level directory. Add the path of FCUDA and other software
-according to the setup of your system in this file. After that, execute the command `source env_vars.sh` to
-export all the defined environment variables.
+- Clone the FCUDA benchmarks repository and the FCUDA SoC repository by using the command `python setup_repo.py`.
+The script will clone the fcuda-benchmarks and fcuda-soc repositories.
 
 ##FCUDA C-Level Testing
-- Clone the FCUDA benchmark repository.
+- Make sure you clone the FCUDA benchmarks repository before testing.
 
 - The repository contains several benchmarks for testing FCUDA at C-Level. They are CUDA applications
 collected from some CUDA benchmark suites such as NVIDIA SDK, Parboil suite, Rodinia suite.
