@@ -1,7 +1,7 @@
 #!/bin/sh
 # build.sh - build script for Cetus.
 #
-
+JAVABIN=/usr/bin
 # Specify the location of the antlr.jar file for your system.
 ANTLR=$(pwd)/lib/antlr.jar
 if [ ! -f $ANTLR ]; then
@@ -48,13 +48,13 @@ case "$1" in
   echo "Compiling the source files..."
   [ -f $PARSER/NewCParser.java ] || $0 parser
   [ -d class ] || mkdir class
-  javac -g -cp $ANTLR:class -d class $SRC
+  $JAVABIN/javac -g -cp $ANTLR:class -d class $SRC
   ;;
   jar)
   $0 compile $ANTLR
   echo "Archiving the class files..."
   [ -d lib ] || mkdir lib
-  jar cf lib/cetus.jar -C class .
+  $JAVABIN/jar cf lib/cetus.jar -C class .
   ;;
   javadoc)
   echo "Generating JAVA documents..."
