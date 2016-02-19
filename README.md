@@ -17,15 +17,16 @@ does not rely on any specific compiler infrastructure from NVIDIA (nvcc).
 ##FCUDA Setup
 - Open the script **env_vars.sh** at the top-level directory. Add the path of FCUDA and other software
 according to the setup of your system in this file. After that, execute the command `source env_vars.sh` to
-export all the defined environment variables.
+export all the defined environment variables (bash shell is required in order to run this command, for other
+shell please modify the script accordingly).
 
 - Change the directory to *fcuda_src/*. The compiler is written in Java. Hence, Java compiler 
-(javac) is required. Please install openjdk. Alternatively, you can run the script: `python setup_packages.py` 
-to automatically install all the required software.
+(javac) is required. Please install openjdk. Alternatively, you can run the script: `sudo python setup_packages.py` 
+to automatically install all the required software (check the required sofware in the file **packages.lst**).
 
 - Compile the source code: `./make_FCUDA.sh compile` . It will compile Cetus source code (located under
 *cetus-1.3/src/*) and FCUDA source code (located under *src/*) to generate binary files **cetus.jar** and
-**fcuda_jar**, respectively. These files are put under *jar/*. Please note that whenever you update the 
+**fcuda.jar**, respectively. These files are put under *jar/*. Please note that whenever you update the 
 FCUDA source code or Cetus source code, you have to do the recompilation.
 
 - Clone the FCUDA benchmarks repository and the FCUDA SoC repository by using the command `python setup_repo.py`.
@@ -173,9 +174,6 @@ FCUDA pragma annotations.
 this skeleton. Some of them will be much more complex. And this model also does not guarantee the most
 optimization of the FCUDA generated code. One must study the CUDA kernel thoroughly to make decision
 of how to insert FCUDA pragma annotations in a smart way to have a good performance.
-
-- For more information and better insight on FCUDA, you can read an old README file in `fcuda_src/README.kg`.
-This file lists several issues of FCUDA, some has been fixed and some has not to dated.
 
 ##Relevant Publication
 + [1] MCUDA: An Efficient Implementation of CUDA Kernels for Multi-Core CPUs (John et al.).

@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 #Please source this file before testing any benchmark
 
 #Path to FCUDA directory. Modify it according to
