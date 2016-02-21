@@ -1,71 +1,34 @@
 Terms of Use
 
-University of Illinois at Urbana-Champaign and the authors provide these application files to you 
-subject to the Terms of Use, which may be updated by us from time to time without notice to you. 
-The most up-to-date Terms of Use can be found on Prof. Deming Chen’s homepage (“Website”) 
-at http://dchen.ece.illinois.edu/.
-
-By using the FCUDA application ("application"), you acknowledge that you have read the 
-most up-to-date Terms of Use and agree to abide by the Terms of Use (“Terms”).
+University of Illinois at Urbana-Champaign, University of California at Los Angeles, and the authors provide these Software files to you subject to the Terms of Use. By using the FCUDA Software ("Software"), you acknowledge that you have read the most up-to-date Terms of Use and agree to abide by the Terms of Use (“Terms”).
 
 License Agreement
 
-University of Illinois at Urbana-Champaign grants, free of charge, to any users the right to 
-modify, copy, and redistribute the Software, both within the user's organization and externally, 
-subject to the following restrictions:
+University of Illinois at Urbana-Champaign and University of California at Los Angeles grant, free of charge, to any users the right to modify, copy, and redistribute the Software, both within the user's organization and externally, subject to the following restrictions:
 
-1. The users agree to uses this software for research purposes only. Users interested in using
-the application for commercial purposes can contact Prof. Deming Chen (dchen@illinois.edu) for discussion of commercial licensing terms.
+1. The users agree to use this Software for research purposes only. Users interested in using the Software for commercial purposes can contact Prof. Deming Chen (dchen@illinois.edu), Prof. Jason Cong (cong@cs.ucla.edu), or Prof. Wen-Mei Hwu (w-hwu@illinois.edu) for discussion of commercial licensing terms.
 
-2. In any product based on the Software, the users agree to acknowledge the Research Group that 
-developed the software. This acknowledgment shall appear in the product documentation.
+2. In any product based on the Software, the users agree to acknowledge the Research Group that developed the Software. This acknowledgment shall appear in the product documentation.
 
-3. The users agree to obey all U.S. Government restrictions governing redistribution or export of 
-the software.
+3. The users agree to obey all U.S. Government restrictions governing redistribution or export of the Software.
 
-4. The users agree to reproduce any copyright notice which appears on the software on any copy 
-or modification of such made available to others.
-
-
+4. The users agree to reproduce any copyright notice which appears on the Software on any copy or modification of such made available to others.
 
 Additional Terms
 
-You agree to appropriately acknowledge and reference the work by University of 
-Illinois at Urbana-Champaign in all publications, presentations, and/or other works derived 
-from the use, in part or in whole, of this application and/or its variants. (See Section 5. References 
-and additional references on the Website.)
+You agree to appropriately acknowledge and reference the FCUDA work in all publications, presentations, and/or other works derived from the use, in part or in whole, of this Software and/or its variants. When referencing this Software in a publication, please cite:
 
-When referencing this application in a publication, please cite:
+[1] A. Papakonstantinou, K. Gururaj, J. Stratton, D. Chen, J. Cong, and W.M. Hwu, "FCUDA: Enabling Efficient Compilation of CUDA Kernels onto FPGAs," Proceedings of IEEE Symposium on Application Specific Processors, July 2009.
 
-@inproceedings{tanfpga2016,
- author = {Nguyen, Tan and Gurumani, Swathi and Rupnow, Kyle and Chen, Deming},
- title = {FCUDA-SoC: Platform Integration for Field-Programmable SoC with the CUDA-to-FPGA Compiler},
- booktitle = {Proceedings of the ACM/SIGDA International Symposium on Field Programmable Gate Arrays},
- series = {FPGA '16},
- year = {2016},
- isbn = {},
- location = {Monterey, California, USA},
- pages = {},
- numpages = {10},
- url = {},
- doi = {},
- acmid = {},
- publisher = {ACM},
- address = {New York, NY, USA},
-} 
+[2] A. Papakonstantinou, Y. Liang, J. Stratton, K. Gururaj, D. Chen, W.M. Hwu and J. Cong, "Multilevel Granularity Parallelism Synthesis on FPGAs,"Proceedings of IEEE International Symposium on Field-Programmable Custom Computing Machines, May 2011.
 
+[3] T. Nguyen, S. Gurumani, K. Rupnow, and D. Chen, “FCUDA-SoC: Platform Integration for Field-Programmable SoC with the CUDA-to-FPGA Compiler,” Proceedings of ACM/SIGDA International Symposium on Field Programmable Gate Arrays, February 2016. 
 
 Disclaimer and Limitation of Liability
 
-This Model is provided to you “As Is,” without warranty of any kind, either expressed or implied 
-By using this Model, you agree that you and your representing institution or company will not hold 
-University of Illinois at Urbana-Champaign, the application inventors, the application authors, as well as 
-all other contributing members to the application and its official distribution, liable for damage of any 
-kind resulting from the download or use of the application and its files and documents.
+This Software is provided to you “As Is,” without warranty of any kind, either expressed or implied. By using this Software, you agree that you and your representing institution or company will not hold University of Illinois at Urbana-Champaign, University of California at Los Angeles, the Software inventors, the Software authors, as well as all other contributing members to the Software and its official distribution, liable for damage of any kind resulting from the download or use of the Software and its files and documents.
 
 Legal Notice
 
-This application, including the files, documents, and inherent ideas, are protected by United States 
-Copyright Law and United States Patent Law. University of Illinois at Urbana-Champaign and the 
-authors reserve all rights. Unauthorized reproduction of the files and/or the documents included in 
-the application package is unlawful.
+This Software, including the files, documents, and inherent ideas, are protected by United States Copyright Law and United States Patent Law. University of Illinois at Urbana-Champaign, University of California at Los Angeles, and the authors reserve all rights. Unauthorized reproduction of the files and/or the documents included in the Software package is unlawful.
+
