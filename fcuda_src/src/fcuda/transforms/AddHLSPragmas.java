@@ -59,6 +59,7 @@ public class AddHLSPragmas extends KernelTransformPass
       if (proc.getName().toString().equals(constMemKern.toString()))
         return;
     }
+    
     List<PragmaAnnotation> pragmaList;
     pragmaList = FCUDAGlobalData.getHLSPragmas(proc);
     if (pragmaList == null)

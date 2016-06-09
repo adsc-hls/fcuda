@@ -42,6 +42,11 @@ public class FCUDAGlobalData
   // Keeps track of pragmas we want to add... 
   //private static LinkedList<PragmaAnnotation> mHLSPragmasToAdd;
   private static HashMap<Procedure, LinkedList<PragmaAnnotation>> mHLSPragmasToAdd;
+
+  private static HashMap<Procedure, LinkedList<String>> mOutsideBRAM;
+
+  private static HashMap<Procedure, LinkedList<Statement>> mTagBRAMStmt;
+
   //private static LinkedList<Procedure> mProceduresNeedingPragmas;
   private static LinkedList<Procedure> mWrapperSingleKern;
 
@@ -83,7 +88,7 @@ public class FCUDAGlobalData
   private static HashMap<Procedure, Statement> mIncrementBlkXStmt;
   private static HashMap<Procedure, WhileLoop> mBlockIdxLoop;
   private static HashMap<Procedure, WhileLoop> mBlkXLoop;
-    private static HashMap<Procedure, IfStatement> mBlkYIf;
+  private static HashMap<Procedure, IfStatement> mBlkYIf;
 
   // Statements to ignore during duplication
   private static HashSet<Statement> mIgnoreDuringDuplication;
@@ -146,6 +151,10 @@ public class FCUDAGlobalData
     mBlkYIf = new HashMap<Procedure, IfStatement>();
 
     mHLSPragmasToAdd = new HashMap<Procedure, LinkedList<PragmaAnnotation>>();
+
+    mOutsideBRAM = new HashMap<Procedure, LinkedList<String>>();
+
+    mTagBRAMStmt = new HashMap<Procedure, LinkedList<Statement>>();
 
     mWrapperSingleKern = new LinkedList<Procedure>();
     mKernel2TblkDim = new HashMap<Procedure, Integer>();
@@ -1029,6 +1038,46 @@ public class FCUDAGlobalData
   public static List<PragmaAnnotation> getHLSPragmas(Procedure proc) 
   {
     return mHLSPragmasToAdd.get(proc);
+  }
+
+  public static void addOutsideBRAM(Procedure proc, String name) 
+  {
+    if (!mOutsideBRAM.containsKey(proc)) {
+      LinkedList<String> listPragmas = new LinkedList<String>();
+      mOutsideBRAM.put(proc, listPragmas);
+    }
+    mOutsideBRAM.get(proc).add(name);
+  }
+
+  public static List<String> getOutsideBRAMList(Procedure proc) 
+  {
+    if (!mOutsideBRAM.containsKey(proc))
+      return null;
+    return mOutsideBRAM.get(proc);
+  }
+
+
+  public static boolean isOutsideBRAM(Procedure proc, String name)
+  {
+    if (!mOutsideBRAM.containsKey(proc))
+      return false;
+    return mOutsideBRAM.get(proc).contains(name);
+  }
+
+  public static void addTagBRAMStmt(Procedure proc, Statement stmt) 
+  {
+    if (!mTagBRAMStmt.containsKey(proc)) {
+      LinkedList<Statement> listPragmas = new LinkedList<Statement>();
+      mTagBRAMStmt.put(proc, listPragmas);
+    }
+    mTagBRAMStmt.get(proc).add(stmt);
+  }
+
+  public static boolean isTagBRAMStmt(Procedure proc, Statement stmt)
+  {
+    if (!mTagBRAMStmt.containsKey(proc))
+      return false;
+    return mTagBRAMStmt.get(proc).contains(stmt);
   }
 
   public static List<Procedure> getListWrapperSingleKern() 

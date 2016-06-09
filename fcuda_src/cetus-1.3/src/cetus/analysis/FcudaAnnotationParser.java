@@ -210,6 +210,7 @@ public class FcudaAnnotationParser
 	case token_end		:	parse_fcuda_end(); break;
 	case token_local	:	parse_fcuda_local(tokenVal[1]); break;
 	case token_rsize	:	parse_fcuda_rsize(tokenVal[1]); break;
+        case token_inline	:	parse_fcuda_inline(tokenVal[1]); break;
 	default : FcudaAnnotationParserError("NoSuchTransferConstruct : " + clause);
       }
     }
@@ -238,6 +239,7 @@ public class FcudaAnnotationParser
         case token_shared       :       parse_fcuda_shared(tokenVal[1]); break;     
         case token_non_shared   :       parse_fcuda_non_shared(tokenVal[1]); break;
         case token_bram_core    :       parse_fcuda_bram_core(tokenVal[1]); break;
+        case token_inline	:	parse_fcuda_inline(tokenVal[1]); break;
 	default : FcudaAnnotationParserError("NoSuchComputeConstruct : " + clause);
       }
     }
@@ -467,6 +469,15 @@ public class FcudaAnnotationParser
     addToMap("rsize", val);
 
   }
+
+  private static void parse_fcuda_inline(String val)
+  {
+    Tools.println("FcudaAnnotationParser is parsing [inline] clause", 2);
+
+    addToMap("inline", val);
+
+  }
+
   
   private static void parse_fcuda_remove_port_name(String val)
   {
@@ -713,5 +724,6 @@ public class FcudaAnnotationParser
       token_shared,
       token_non_shared,
       token_bram_core,
+      token_inline
   }
 }

@@ -42,6 +42,8 @@ public class FixFCUDAMemParams extends KernelTransformPass
     super(program);
   }
 
+  private static HashMap<String, VariableDeclarator> mPtr2Offset = new HashMap<String, VariableDeclarator>();
+
   // given an identifier, check to see if it is in a list of IDs to remove
   private boolean child_matches(List<String> removals, String id) {
     int i;
@@ -251,12 +253,21 @@ public class FixFCUDAMemParams extends KernelTransformPass
 
         Statement s = getFirstNonDeclarationStatement(proc.getBody());
 
-        if (s==null){
+        if (s == null) {
           throw new RuntimeException("Could not rename memory ports: could not find initial statement");
         }
         System.out.println(name);
         System.out.println(name + " " + remAnnotations);
-        Expression offset = new NameID(getOffsetFromName(name, remAnnotations));
+        String offsetName = getOffsetFromName(name, remAnnotations);
+        if (offsetName == null) {
+          offsetName = name + "_addr";
+          VariableDeclarator offsetV = new VariableDeclarator(new NameID(offsetName));
+          mPtr2Offset.put(name, offsetV);
+          VariableDeclaration offsetVd  = new VariableDeclaration(Specifier.INT, offsetV);
+          proc.addDeclaration(offsetVd);
+        }
+
+        Expression offset = new NameID(offsetName);
         proc.getBody().addStatementBefore(s, new ExpressionStatement(
               new AssignmentExpression(new Identifier(nv),
                 AssignmentOperator.NORMAL, new UnaryExpression(
@@ -287,8 +298,6 @@ public class FixFCUDAMemParams extends KernelTransformPass
 
     CompoundStatement body = proc.getBody();
 
-    // This is a mess: there's no good way to iterate through annotatable 
-    // statements  :-( 
     // There should really an iterator option to iterate over only a 
     // given class. E.g. iterate over all statements, annotatables, etc
     DepthFirstIterator<Traversable> dfi = new DepthFirstIterator<Traversable>(body);
@@ -307,18 +316,16 @@ public class FixFCUDAMemParams extends KernelTransformPass
       }
     }
 
-    // We new have the matching annotations
+    // We now have the matching annotations
     // We need to create new variable declarations for each
     // and add this declaration to the process
 
     for (Annotation an : remAnnotations) {
       Annotatable a = an.getAnnotatable();
-      // We expect __shared flaot As[16][16] to be a Statement
       if (a instanceof DeclarationStatement){
         Declaration d = ((DeclarationStatement)a).getDeclaration();
         if (d instanceof VariableDeclaration) {
           // This should remove the original from the body
-
           VariableDeclaration orig = (VariableDeclaration)d;
           VariableDeclarator orig_dl = (VariableDeclarator)orig.getDeclarator(0);
           System.out.println("orig: " + orig);
@@ -336,16 +343,105 @@ public class FixFCUDAMemParams extends KernelTransformPass
           VariableDeclaration vd = new VariableDeclaration(orig.getSpecifiers(),nv); 
           proc.addDeclaration(vd);
 
-          String the_name = name;
-          String pragma_annot = new String("HLS interface ap_memory port=" + the_name);
-          FCUDAGlobalData.addHLSPragma(proc, new PragmaAnnotation(pragma_annot));
-        }
-        System.out.println("got just what i wanted");
-      } else {
-        System.out.println("no luck");
-      }
+          FCUDAGlobalData.addOutsideBRAM(proc, name);
 
+          //Tag BRAM
+          NameID newNameTagBRAM = new NameID(name + "_tag"); 
+          VariableDeclarator nvTagBRAM = new VariableDeclarator(newNameTagBRAM, orig_dl.getArraySpecifiers());
+          VariableDeclaration vdTagBRAM  = new VariableDeclaration(Specifier.INT, nvTagBRAM);
+          proc.addDeclaration(vdTagBRAM);
+
+          //Index pointer
+          //NameID newNameIndexPtr = new NameID(name + "_index"); 
+          //VariableDeclarator nvIndexPtr = new VariableDeclarator(PointerSpecifier.UNQUALIFIED, newNameIndexPtr);
+          //VariableDeclaration vdIndexPtr  = new VariableDeclaration(Specifier.INT, nvIndexPtr);
+          //proc.addDeclaration(vdIndexPtr);
+
+          String bram_name = name;
+          String interface_pragma_annot = new String("HLS interface ap_memory port=" + bram_name);
+          FCUDAGlobalData.addHLSPragma(proc, new PragmaAnnotation(interface_pragma_annot));
+
+          //Support 1-port BRAM for now
+          String resource_pragma_annot = new String("HLS resource variable=" + bram_name + " core=RAM_1P_BRAM");
+          FCUDAGlobalData.addHLSPragma(proc, new PragmaAnnotation(resource_pragma_annot));
+
+        }
+      }
     }
+
+    //Find an assignment statement like: on-chip = off-chip (READ)
+    //then add tag BRAM statement
+    //Note: now only check whether both LHS and RHS are array access
+    //Probably need to extend to broader cases like pointer access ...
+    //It is only used for NoC for now
+    DepthFirstIterator iter = new DepthFirstIterator(proc);
+    iter.pruneOn(Expression.class);
+
+    while(iter.hasNext()) {
+      Statement stmt = null;
+
+      try {
+        stmt = (Statement)iter.next(Statement.class);
+      }
+      catch (NoSuchElementException e) {
+        break;
+      }
+      // Looking only for assignments
+      if (!(stmt instanceof ExpressionStatement))
+        continue;
+      Expression expr = ((ExpressionStatement)stmt).getExpression();
+      if (!(expr instanceof AssignmentExpression))
+        continue;
+
+      Expression LHSExpr = ((AssignmentExpression)expr).getLHS();
+      Expression RHSExpr = ((AssignmentExpression)expr).getRHS();
+
+      if (!((LHSExpr instanceof ArrayAccess) && (RHSExpr instanceof ArrayAccess)))
+        continue;
+      if (!(mPtr2Offset.containsKey(((ArrayAccess)RHSExpr).getArrayName().toString())))
+        continue;
+
+      VariableDeclarator offset = mPtr2Offset.get(((ArrayAccess)RHSExpr).getArrayName().toString());
+
+      if (FCUDAGlobalData.isOutsideBRAM(proc, ((ArrayAccess)LHSExpr).getArrayName().toString())) {
+        String tagBRAMName = ((ArrayAccess)LHSExpr).getArrayName().clone().toString() + "_tag";
+        IDExpression tagBRAMExpr = (IDExpression)new NameID(tagBRAMName);
+
+        List<Expression> bramIndices = ((ArrayAccess)LHSExpr).getIndices();
+        List<Expression> bramIndices_clone = new LinkedList<Expression>();
+        for (Expression e : bramIndices)
+          bramIndices_clone.add(e.clone());
+        ArrayAccess tagbramArg = new ArrayAccess(tagBRAMExpr.clone(),
+                          bramIndices_clone);
+        Expression tagAddress = new BinaryExpression(
+            (IDExpression) new Identifier(offset.clone()),
+            BinaryOperator.ADD,
+            ((ArrayAccess)RHSExpr).getIndex(0).clone());
+        ExpressionStatement tagStmt = new ExpressionStatement(
+            new AssignmentExpression(
+              tagbramArg,
+              AssignmentOperator.NORMAL,
+              tagAddress));
+
+        //Add dummy If condition to make sure tag BRAM is accessed
+        //before memory read (and data BRAM). Unfortunately, it will
+        //certainly degrade the performance.
+        IfStatement dummyCheck = new IfStatement(
+          new BinaryExpression(
+            tagbramArg.clone(), 
+            BinaryOperator.COMPARE_GE, 
+            new IntegerLiteral(0)),
+          stmt.clone());
+
+        FCUDAGlobalData.addTagBRAMStmt(proc, tagStmt);
+
+        CompoundStatement cstmt = (CompoundStatement)stmt.getParent();
+        cstmt.addStatementBefore(stmt, dummyCheck);
+        cstmt.addStatementBefore(dummyCheck, tagStmt);
+        stmt.detach();
+      }
+    }
+
   }
 
 

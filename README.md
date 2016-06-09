@@ -175,7 +175,37 @@ this skeleton. Some of them will be much more complex. And this model also does 
 optimization of the FCUDA generated code. One must study the CUDA kernel thoroughly to make decision
 of how to insert FCUDA pragma annotations in a smart way to have a good performance.
 
-##Relevant Publication
+##CONTRIBUTORS
+The FCUDA project, started in 2009, is a collaboration work of many PhD/Master 
+students, Professors, research scientists and engineers from various institutions.
+
+Alex Papakonstantinou
+
+John Stratton
+
+Karthik Gururaj
+
+Eric Yun Liang
+
+Jacob Tolar
+
+Ying Chen
+
+Yao Chen
+
+Tan Nguyen
+
+Swathi Gurumani
+
+Kyle Rupnow
+
+Wen-mei Hwu
+
+Jason Cong
+
+Deming Chen
+
+##Relevant Publications
 + [1] MCUDA: An Efficient Implementation of CUDA Kernels for Multi-Core CPUs (John et al.).
 + [2] FCUDA: Enabling Efficient Compilation of CUDA Kernels onto FPGAs (Alex et al.).
 + [3] Multilevel Granularity Parallelism Synthesis on FPGAs (Alex et al.).

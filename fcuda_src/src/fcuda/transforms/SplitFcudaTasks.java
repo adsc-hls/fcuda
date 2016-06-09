@@ -155,7 +155,7 @@ public class SplitFcudaTasks extends KernelTransformPass
 
       Set<Expression> defSet = DataFlowTools.getDefSet(expr);
       Set<Expression> useSet = DataFlowTools.getUseSet(expr);
-
+    
       if (defSet.contains(id))
       {
         List<Expression> threadIds = MCUDAUtils.Tidx.getId();
@@ -529,6 +529,15 @@ public class SplitFcudaTasks extends KernelTransformPass
       // Handle BRAM args
       IDExpression bramId = null;
       transferStmt = FCUDAutils.getNxtStmt(transferStmt);
+      //If it is the previously added tag BRAM statement, 
+      //remove it because we will add a new one based on burst statement
+      if (FCUDAGlobalData.isTagBRAMStmt(proc, transferStmt)) {
+        Statement tagStmt = transferStmt;
+        transferStmt = FCUDAutils.getNxtStmt(transferStmt);
+        tagStmt.detach();
+        //continue;
+        //return;
+      }
       System.out.println("transferStmt: "+transferStmt.toString());
       bramId = findBRAM(ptrId, dir, transferStmt);
 
@@ -609,6 +618,7 @@ public class SplitFcudaTasks extends KernelTransformPass
       taskArgs.add(new Identifier(offsetDeclor));
       taskDecls.add((VariableDeclaration)offsetDeclion.clone());
 
+      ArrayAccess bramArg = null;
       //Block ram id added for memcpy function
       if (bramDim > 1)
       {
@@ -621,8 +631,9 @@ public class SplitFcudaTasks extends KernelTransformPass
          * identical with the dimension of the BRAM or not.
          */
         LinkedList<Expression> bramArrayIdx = new LinkedList();
+
         numDims = FCUDAGlobalData.getKernTblkDim(mProcedure);
-        ArrayAccess bramArg;
+        
         if (numDims == bramDim) {
           bramArrayIdx.add(MCUDAUtils.Tidx.getId(bramDim - 1));
           bramArg = new ArrayAccess((IDExpression)bramId.clone(), bramArrayIdx);
@@ -643,7 +654,6 @@ public class SplitFcudaTasks extends KernelTransformPass
           }
           bramArg = new ArrayAccess(bramId.clone(), 
               (((ArrayAccess)bramId.getParent()).getIndex(0)).clone());
-
           for (Identifier id: listIds) {
             VariableDeclarator idDeclor = new VariableDeclarator(id.clone());
             VariableDeclaration idDeclion = new VariableDeclaration(leadSpecList, (Declarator)idDeclor);
@@ -651,10 +661,14 @@ public class SplitFcudaTasks extends KernelTransformPass
             taskDecls.add((VariableDeclaration)idDeclion.clone());
           }
         }
-        memcpyArgs.add(Symbolic.add(bramArg, new Identifier(offsetDeclor)));
+        //memcpyArgs.add(Symbolic.add(bramArg, new Identifier(offsetDeclor)));
       }
-      else
-        memcpyArgs.add(Symbolic.add((IDExpression) bramId.clone(), new Identifier(offsetDeclor)));
+      else {
+        //memcpyArgs.add(Symbolic.add((IDExpression) bramId.clone(), new Identifier(offsetDeclor)));
+        bramArg = new ArrayAccess((IDExpression)bramId.clone(), new IntegerLiteral(0));
+      }
+      memcpyArgs.add(Symbolic.add(bramArg, new Identifier(offsetDeclor)));
+
       Expression[] affineCoeffs;
 
       // Check the address form - (See PrepareForSplit.java for details)
@@ -742,11 +756,55 @@ public class SplitFcudaTasks extends KernelTransformPass
       //memcpy call
       memcpyCall = new FunctionCall(new NameID("memcpy"), memcpyArgs);
 
+      ExpressionStatement tagStmt = null;
+      if (FCUDAGlobalData.isOutsideBRAM(proc, bramId.toString())) {
+
+        String ptrOffset = ptrName + "_addr";
+        IDExpression ptrOffsetExpr = (IDExpression)new NameID(ptrOffset);
+        VariableDeclarator ptrOffsetDeclor = new VariableDeclarator(ptrOffsetExpr);
+        VariableDeclaration ptrOffsetDeclion = new VariableDeclaration(Specifier.INT, (Declarator)ptrOffsetDeclor);
+        taskArgs.add(new Identifier(ptrOffsetDeclor));
+        taskDecls.add((VariableDeclaration)ptrOffsetDeclion.clone());
+
+        String tagBRAMName = bramId.clone().toString() + "_tag";
+        IDExpression tagBRAMExpr = (IDExpression)new NameID(tagBRAMName);
+        VariableDeclarator tagBRAMDeclor = new VariableDeclarator(tagBRAMExpr, bramDecl.getDeclarator(0).getArraySpecifiers());
+        VariableDeclaration tagBRAMDeclion = new VariableDeclaration(Specifier.INT, (Declarator)tagBRAMDeclor);
+
+        taskArgs.add(new Identifier(tagBRAMDeclor));
+        taskDecls.add((VariableDeclaration)tagBRAMDeclion.clone());
+
+        List<Expression> bramIndices = bramArg.getIndices();
+        List<Expression> bramIndices_clone = new LinkedList<Expression>();
+        for (Expression expr : bramIndices)
+          bramIndices_clone.add(expr.clone());
+        bramIndices_clone.add(new Identifier(offsetDeclor));
+        ArrayAccess tagbramArg = new ArrayAccess(tagBRAMExpr.clone(), 
+                bramIndices_clone);
+
+        Expression tagAddress = new BinaryExpression(
+            ptrOffsetExpr.clone(), BinaryOperator.ADD,
+            new BinaryExpression( 
+              new Identifier(X), BinaryOperator.ADD, 
+                new BinaryExpression(
+                  new Identifier(c1), BinaryOperator.MULTIPLY,
+                  MCUDAUtils.Tidx.getId(1))));
+
+        tagStmt = new ExpressionStatement(
+            new AssignmentExpression(
+              tagbramArg, 
+              AssignmentOperator.NORMAL, 
+              tagAddress));
+
+      }
+
       // *AP* Create separate loop body for each transfer
       // *AP* mainly because different memories might need different partitioning
       // *AP* Threadloops could potentially be fused if no difference in partitioning
       if (bramDim > 1) {
         CompoundStatement threadloopBody = new CompoundStatement();
+        if (tagStmt != null)
+          threadloopBody.addStatement(tagStmt);
         threadloopBody.addStatement(new ExpressionStatement(memcpyCall));
         ThreadLoop burstloop = new ThreadLoop(threadloopBody, numDims);
         burstloop.setInit(0, null);
@@ -760,8 +818,11 @@ public class SplitFcudaTasks extends KernelTransformPass
         fcTask.addStatement(burstloop);
 
       }
-      else   // No threadloop for one dimensional BRAMS
+      else {   // No threadloop for one dimensional BRAMS
+        if (tagStmt != null)
+          fcTask.addStatement(tagStmt);
         fcTask.addStatement(new ExpressionStatement(memcpyCall));
+      }
     }
     coresList.clear();
     sizeList.clear();
@@ -797,6 +858,7 @@ public class SplitFcudaTasks extends KernelTransformPass
     String mpartFactor = "";
     String splitArrays = "";
     String shapes = "";
+    String inline = "";
     // Eric
     String shared      = "";
     String nonshared   = "";
@@ -849,6 +911,7 @@ public class SplitFcudaTasks extends KernelTransformPass
       nonshared    = (String) fcAnnot.get("non_shared");
       bramcore     = (String) fcAnnot.get("bram_core");
       shared       = (String) fcAnnot.get("shared");
+      inline       = (String) fcAnnot.get("inline");
 
       if (!(annotType.equals("transfer") || annotType.equals("compute"))) {
         if (curTask != null) { // Found other pragma between Compute or Transfer pragmas
@@ -992,6 +1055,9 @@ public class SplitFcudaTasks extends KernelTransformPass
             FCUDAutils.parseList(shared, arrayList);
             FCUDAutils.setTaskSharedArray(fcProc, arrayList);
           }
+
+          if (inline != null)
+            FCUDAutils.setTaskInline(fcProc, inline);
         }
         else { 	// Beginning of new task
           curTask = new String(task);
@@ -1178,6 +1244,19 @@ public class SplitFcudaTasks extends KernelTransformPass
 
         FCUDAGlobalData.addFcudaCore(proc, taskCall);
         FCUDAGlobalData.setCoreName(taskCall, (String)fcAnnot.get("name"));
+
+        String inlinePragmaStr = null;
+        if (fcAnnot.get("inline") != null) {
+          if (((String)fcAnnot.get("inline")).toString().equals("yes"))
+            inlinePragmaStr =new String("HLS INLINE");
+          else if (((String)fcAnnot.get("inline")).toString().equals("no"))
+            inlinePragmaStr = new String("HLS INLINE OFF"); 
+        }
+
+        if (inlinePragmaStr != null) {
+          AnnotationStatement hlsInlinePragma = new AnnotationStatement(new PragmaAnnotation(inlinePragmaStr));
+          fcTask.addStatement(hlsInlinePragma);
+        }
 
         if (annotType.equals("transfer"))
           FCUDAGlobalData.setCoreType(taskCall, FcudaCoreData.TRANSFER_TYPE);

@@ -43,7 +43,9 @@ public class FCUDAutils
   protected static HashMap<Procedure, String> mTask2MemPart;
   protected static HashMap<Procedure, List<String>> mTask2SplitArray;
   protected static HashMap<Procedure, List<String>> mTask2Shape;
+  protected static HashMap<Procedure, String> mTask2Inline;
   protected static HashMap<Procedure, String> mTask2Type;
+
 
   //Eric
   protected static HashMap<Procedure, List<String>> mTask2SharedArray;
@@ -62,6 +64,7 @@ public class FCUDAutils
     mTask2MemPart = new HashMap<Procedure, String>();
     mTask2SplitArray = new HashMap<Procedure, List<String>>();
     mTask2Shape = new HashMap<Procedure, List<String>>();
+    mTask2Inline = new HashMap<Procedure, String>();
     mTask2Type = new HashMap<Procedure, String>();
 
     //Eric
@@ -173,6 +176,14 @@ public class FCUDAutils
 
   }
 
+  public static void setTaskInline(Procedure task, String inlineStr)
+  {
+    if (mTask2Inline.containsKey(task))
+      mTask2Inline.remove(task);
+
+    mTask2Inline.put(task, inlineStr);
+  }
+
   public static List<Procedure> getTaskMapping(String kern)
   {
     List<Procedure> kernTasks = null;
@@ -276,6 +287,15 @@ public class FCUDAutils
     if(mTask2TotalBlock.containsKey(task))
       totalBlock = Integer.parseInt(mTask2TotalBlock.get(task));
     return totalBlock;
+  }
+
+  public static String getTaskInline(Procedure task)
+  {
+    String inlineStr = null;
+    if (mTask2Inline.containsKey(task))
+      inlineStr = mTask2Inline.get(task);
+
+    return inlineStr;
   }
 
   public static String getTaskType(Procedure task)
