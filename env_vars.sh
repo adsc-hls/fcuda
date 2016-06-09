@@ -32,4 +32,10 @@ export BACKPROP=$BENCHMARKS/backprop
 export BFS=$BENCHMARKS/bfs
 export PARTICLEFILTER_NAIVE=$BENCHMARKS/particlefilter_naive
 export SRAD_V2=$BENCHMARKS/srad_v2
+export CONV1D=$BENCHMARKS/conv1d
+export DCT=$BENCHMARKS/dct
+export IDCT=$BENCHMARKS/idct
+
+
+
 
