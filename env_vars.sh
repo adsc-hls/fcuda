@@ -36,6 +36,5 @@ export CONV1D=$BENCHMARKS/conv1d
 export DCT=$BENCHMARKS/dct
 export IDCT=$BENCHMARKS/idct
 
-
-
-
+export BUS_DIR=$FCUDA_DIR/fcuda-backend/fcuda-bus
+export NOC_DIR=$FCUDA_DIR/fcuda-backend/fcuda-noc

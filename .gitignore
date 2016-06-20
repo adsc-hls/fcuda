@@ -10,5 +10,5 @@ fcuda.jar
 *.pyc
 *.o
 *.log
-fcuda-soc/
+fcuda-backend/
 fcuda-benchmarks/
