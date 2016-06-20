@@ -661,13 +661,13 @@ public class SplitFcudaTasks extends KernelTransformPass
             taskDecls.add((VariableDeclaration)idDeclion.clone());
           }
         }
-        //memcpyArgs.add(Symbolic.add(bramArg, new Identifier(offsetDeclor)));
+        memcpyArgs.add(Symbolic.add(bramArg, new Identifier(offsetDeclor)));
       }
       else {
-        //memcpyArgs.add(Symbolic.add((IDExpression) bramId.clone(), new Identifier(offsetDeclor)));
-        bramArg = new ArrayAccess((IDExpression)bramId.clone(), new IntegerLiteral(0));
+        memcpyArgs.add(Symbolic.add((IDExpression) bramId.clone(), new Identifier(offsetDeclor)));
+        //bramArg = new ArrayAccess((IDExpression)bramId.clone(), new IntegerLiteral(0));
       }
-      memcpyArgs.add(Symbolic.add(bramArg, new Identifier(offsetDeclor)));
+      //memcpyArgs.add(Symbolic.add(bramArg, new Identifier(offsetDeclor)));
 
       Expression[] affineCoeffs;
 
@@ -1231,13 +1231,24 @@ public class SplitFcudaTasks extends KernelTransformPass
           addBidxDeclaration = false;
         }
 
-        FCUDAutils.addAfterLastDeclaration(
-            proc.getBody(),
-            new ExpressionStatement(
-             new AssignmentExpression(
-              new Identifier(vTmp),
-              AssignmentOperator.NORMAL,
-              enable_all)));
+        if ((fcAnnot.get("disable") != null) && 
+          (((String)fcAnnot.get("disable")).toString().equals("yes"))) {
+          FCUDAutils.addAfterLastDeclaration(
+              proc.getBody(),
+              new ExpressionStatement(
+               new AssignmentExpression(
+                new Identifier(vTmp),
+                AssignmentOperator.NORMAL,
+                new IntegerLiteral(0))));
+        }
+        else
+          FCUDAutils.addAfterLastDeclaration(
+              proc.getBody(),
+              new ExpressionStatement(
+               new AssignmentExpression(
+                new Identifier(vTmp),
+                AssignmentOperator.NORMAL,
+                enable_all)));
 
         taskCall = new FunctionCall(new NameID(proc.getSymbolName() + "_" + fcAnnot.get("name")));
         FCUDAGlobalData.addAnnot2FcudaCore(fcAnnot, taskCall);
@@ -1268,6 +1279,7 @@ public class SplitFcudaTasks extends KernelTransformPass
 
         taskArgs.add(new Identifier(vTmp));
         taskArgSet.add(new Identifier(vTmp));
+
         VariableDeclaration enableDeclClone = enableDecl.clone();
         taskDecls.add(enableDeclClone);
 
