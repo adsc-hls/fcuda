@@ -67,7 +67,8 @@ public class CetusAnnotation extends PragmaAnnotation {
                         (Set)this.get(key), ", "));
                 str.append(") ");
             } else {
-                str.append(key).append(" ").append(get(key)).append(" ");
+		String key_str = get(key);
+                str.append(key).append(" ").append(key_str).append(" ");
             }
         }
         return str.toString();

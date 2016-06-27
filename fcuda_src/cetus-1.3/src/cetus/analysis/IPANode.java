@@ -290,7 +290,8 @@ public class IPANode extends DFANode {
         str.append(" #CallSites = ").append(call_sites.size()).append("\n");
         str.append("    IN =\n");
         if (isRoot()) {
-            str.append("        ").append(this.in()).append("\n");
+	    String this_in_str = this.in();
+	    str.append("        ").append(this_in_str).append("\n");
         } else {
             for (Set<CallSite> calling_sites : in.keySet()) {
                 Domain data_in = in.get(calling_sites);
@@ -300,12 +301,15 @@ public class IPANode extends DFANode {
                 }
             }
         }
-        str.append("    OUT =\n").append("        ").append(out()).append("\n");
+	String out_str = out();
+        str.append("    OUT =\n").append("        ").append(out_str).append("\n");
         str.append("    Calls =\n");
         for (CallSite site : getCallSites()) {
-            str.append("        ").append(site).append("\n");
-            str.append("            IN = ").append(site.in()).append("\n");
-            str.append("            OUT = ").append(site.out()).append("\n");
+	    String site_in_str = site.in();
+	    String site_out_str = site.out();
+            str.append("        ").append(site.getID()).append("\n");
+            str.append("            IN = ").append(site_in_str).append("\n");
+            str.append("            OUT = ").append(site_out_str).append("\n");
         }
         return str.toString();
     }
