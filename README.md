@@ -7,7 +7,7 @@ tool (e.g. Vivado HLS) to generate RTL for execution on FPGA.
 
 - FCUDA is written largely based on Cetus - a source-to-source compiler infrastructure for C program
 which is a research work from Purdue University. The ancestor of FCUDA is MCUDA. It has been largely 
-modified and added some necessary compiler passes on top of it to facilitate the translation of
+modified and some necessary compiler passes were added on top of it to facilitate the translation of
 CUDA kernel to synthesizable C code. That said, FCUDA is also a source-to-source compiler (CUDA to C) and
 does not rely on any specific compiler infrastructure from NVIDIA (nvcc).
 
