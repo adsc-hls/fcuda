@@ -2,7 +2,9 @@
 #Please source this file before testing any benchmark
 
 #Path to FCUDA directory. Modify it according to
-#where you put FCUDA in your system
+#where you put the FCUDA installation directory in 
+#your system
+#e.g: export FCUDA_DIR=/home/user/fcuda
 export FCUDA_DIR=
 #Path to Xilinx software
 export VIVADO_HLS=
