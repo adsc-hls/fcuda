@@ -27,10 +27,19 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE. 
 
-When referencing this application in a publication, please cite:
+When referencing this application in a publication, please cite whichever paper(s) as appropriate:
 
 [1] A. Papakonstantinou, K. Gururaj, J. Stratton, D. Chen, J. Cong, and W.M. Hwu, "FCUDA: Enabling Efficient Compilation of CUDA Kernels onto FPGAs," Proceedings of IEEE Symposium on Application Specific Processors, July 2009.
 
 [2] A. Papakonstantinou, Y. Liang, J. Stratton, K. Gururaj, D. Chen, W.M. Hwu and J. Cong, "Multilevel Granularity Parallelism Synthesis on FPGAs," Proceedings of IEEE International Symposium on Field-Programmable Custom Computing Machines, May 2011.
 
-[3] T. Nguyen, S. Gurumani, K. Rupnow, and D. Chen, “FCUDA-SoC: Platform Integration for Field-Programmable SoC with the CUDA-to-FPGA Compiler,” Proceedings of ACM/SIGDA International Symposium on Field Programmable Gate Arrays, February 2016. 
+[3] S. Gurumani, J. Tolar, Y. Chen, Y. Liang, K. Rupnow, and D. Chen, "Integrated CUDA-to-FPGA Synthesis with Network-on-Chip," Proceedings of IEEE International Symposium on Field-Programmable Custom Computing Machines, May 2014.
+
+[4] Y. Chen, S. T. Gurumani, Y. Liang, G. Li, D. Guo, K. Rupnow, and D. Chen, "FCUDA-NoC: A Scalable and Efficient Network-on-Chip Implementation for the CUDA-to-FPGA Flow", IEEE Transactions on Very Large Scale Integration (VLSI) Systems. 2015.
+
+[5] T. Nguyen, S. Gurumani, K. Rupnow, and D. Chen, "FCUDA-SoC: Platform Integration for Field-Programmable SoC with the CUDA-to-FPGA Compiler," Proceedings of ACM/SIGDA International Symposium on Field Programmable Gate Arrays, February 2016.
+
+[6] Y. Chen, T. Nguyen, Y. Chen, S. T. Gurumani, Y. Liang, K. Rupnow, J. Cong, W.M. Hwu, and D. Chen, "FCUDA-HB: Hierarchical and Scalable Bus Architecture Generation on FPGAs with the FCUDA Flow," IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, 2016.
+
+
+
