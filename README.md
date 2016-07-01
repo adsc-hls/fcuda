@@ -215,5 +215,6 @@ Deming Chen
 + [5] T. Nguyen, S. Gurumani, K. Rupnow, and D. Chen, "FCUDA-SoC: Platform Integration for Field-Programmable SoC with the CUDA-to-FPGA Compiler," Proceedings of ACM/SIGDA International Symposium on Field Programmable Gate Arrays, February 2016.
 + [6] Y. Chen, T. Nguyen, Y. Chen, S. T. Gurumani, Y. Liang, K. Rupnow, J. Cong, W.M. Hwu, and D. Chen, "FCUDA-HB: Hierarchical and Scalable Bus Architecture Generation on FPGAs with the FCUDA Flow," IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, 2016.
 + [7] T. Nguyen, Y. Chen, K. Rupnow, S. Gurumani, and D. Chen, "SoC, NoC and Hierarchical Bus Implementations of Applications on FPGAs Using the FCUDA Flow", Proceedings of IEEE Computer Society Annual Symposium on VLSI, July 2016.
+
 ##Contact
 - For bug reports and comments, please contact Prof. Deming Chen at dchen@illinois.edu
