@@ -29,8 +29,8 @@ to automatically install all the required software (check the required sofware i
 **fcuda.jar**, respectively. These files are put under *jar/*. Please note that whenever you update the 
 FCUDA source code or Cetus source code, you have to do the recompilation.
 
-- Clone the FCUDA benchmarks repository and the FCUDA SoC repository by using the command `python setup_repo.py`.
-The script will clone the fcuda-benchmarks and fcuda-soc repositories.
+- Clone the FCUDA benchmarks repository and the FCUDA backend repository by using the command `python setup_repo.py`.
+The script will clone the fcuda-benchmarks and fcuda-backend repositories.
 
 ##FCUDA C-Level Testing
 - Make sure you clone the FCUDA benchmarks repository before testing.
@@ -193,6 +193,8 @@ Ying Chen
 
 Yao Chen
 
+Hisham Cholakkal
+
 Tan Nguyen
 
 Swathi Gurumani
@@ -206,12 +208,12 @@ Jason Cong
 Deming Chen
 
 ##Relevant Publications
-+ [1] MCUDA: An Efficient Implementation of CUDA Kernels for Multi-Core CPUs (John et al.).
-+ [2] FCUDA: Enabling Efficient Compilation of CUDA Kernels onto FPGAs (Alex et al.).
-+ [3] Multilevel Granularity Parallelism Synthesis on FPGAs (Alex et al.).
-+ [4] Throughput-oriented Kernel Porting onto FPGAs (Alex et al.).
-+ [5] Integrated CUDA-to-FPGA Synthesis with Network-on-Chip (Swathi et al.).
-+ [6] FCUDA-NoC: A Scalable and Efficient Network-on-Chip Implementation for the CUDA-to-FPGA Flow (Yao Chen et al.).
-
++ [1] A. Papakonstantinou, K. Gururaj, J. Stratton, D. Chen, J. Cong, and W.M. Hwu, "FCUDA: Enabling Efficient Compilation of CUDA Kernels onto FPGAs," Proceedings of IEEE Symposium on Application Specific Processors, July 2009.
++ [2] A. Papakonstantinou, Y. Liang, J. Stratton, K. Gururaj, D. Chen, W.M. Hwu and J. Cong, "Multilevel Granularity Parallelism Synthesis on FPGAs," Proceedings of IEEE International Symposium on Field-Programmable Custom Computing Machines, May 2011.
++ [3] S. Gurumani, J. Tolar, Y. Chen, Y. Liang, K. Rupnow, and D. Chen, "Integrated CUDA-to-FPGA Synthesis with Network-on-Chip," Proceedings of IEEE International Symposium on Field-Programmable Custom Computing Machines, May 2014.
++ [4] Y. Chen, S. T. Gurumani, Y. Liang, G. Li, D. Guo, K. Rupnow, and D. Chen, "FCUDA-NoC: A Scalable and Efficient Network-on-Chip Implementation for the CUDA-to-FPGA Flow", IEEE Transactions on Very Large Scale Integration (VLSI) Systems. 2015.
++ [5] T. Nguyen, S. Gurumani, K. Rupnow, and D. Chen, "FCUDA-SoC: Platform Integration for Field-Programmable SoC with the CUDA-to-FPGA Compiler," Proceedings of ACM/SIGDA International Symposium on Field Programmable Gate Arrays, February 2016.
++ [6] Y. Chen, T. Nguyen, Y. Chen, S. T. Gurumani, Y. Liang, K. Rupnow, J. Cong, W.M. Hwu, and D. Chen, "FCUDA-HB: Hierarchical and Scalable Bus Architecture Generation on FPGAs with the FCUDA Flow," IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, 2016.
++ [7] T. Nguyen, Y. Chen, K. Rupnow, S. Gurumani, and D. Chen, "SoC, NoC and Hierarchical Bus Implementations of Applications on FPGAs Using the FCUDA Flow", Proceedings of IEEE Computer Society Annual Symposium on VLSI, July 2016.
 ##Contact
-- Please contact Tan at tan.nguyen@adsc.com.sg if you have any question, feedback, or bug report.
+- For bug reports and comments, please contact Prof. Deming Chen at dchen@illinois.edu
